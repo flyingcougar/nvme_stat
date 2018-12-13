@@ -7,7 +7,7 @@ Usage:
 
 Options:
     -h --help           Show help
-    --dev=<devices>     List of comma sepatared nvme devices to gather stats from [default: all]
+    --dev=<devices>     List of comma separated nvme devices to gather stats from [default: all]
 """  # noqa: E501
 
 
@@ -27,8 +27,12 @@ def main():
     args = docopt(__doc__)
     setup_logging()
     if args["get"]:
-        dev_list = data.check_devices(args["--dev"])
-        print(dev_list)
+
+        dev_list = [dev.strip() for dev in args["--dev"].split(',')]
+        collector = data.NVMStats(dev_list)
+        if not len(collector.get_devices()):
+            logging.error("No nvme devices detected, exiting")
+        collector.gather_all_dev_stats()
 
 
 

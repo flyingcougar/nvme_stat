@@ -3,29 +3,78 @@
 import logging
 import os
 import re
+import threading
 
 core_path = "/sys/block"
 nvm_dev_pattern = "nvm"
 
 
-def check_devices(raw_dev_list):
-    dev_list = [dev.strip() for dev in raw_dev_list.split(',')]
-    if not len(dev_list):
-        raise ValueError('Device list is empty')
+class NVMStats:
+    def __init__(self, init_devs):
+        self.lock = threading.Lock()
+        self.stats = {}
+        self.core_path = "/sys/block"
+        self.nvm_dev_pattern = "nvm"
 
-    if len(dev_list) == 1 and dev_list[0] == "all":
-        return detect_all_devs(nvm_dev_pattern)
-    else:
-        for dev in dev_list:
-            if not os.path.isdir(os.path.join(core_path, dev)):
-                raise ValueError('Device {} does not exist'.format(dev))
+        if not len(init_devs):
+            raise ValueError('Device list is empty')
+
+        if len(init_devs) == 1 and init_devs[0] == "all":
+            self.devices = [dev for dev in os.listdir(self.core_path) if
+                            re.match(self.nvm_dev_pattern, dev)]
+        else:
+            for dev in init_devs:
+                if not os.path.isdir(os.path.join(self.core_path, dev)):
+                    raise ValueError('Device {} does not exist'.format(dev))
+            self.devices = init_devs
+
+    def get_devices(self):
+        return self.devices
+
+    def gather_all_dev_stats(self):
+        new_stats = {}
+        ## TODO: use separate threads per device
+
+        for device in self.devices:
+            new_stats[device] = self.__gather_stats(device)
+        self.lock.acquire()
+        self.stats = new_stats
+        self.lock.release()
 
 
-def detect_all_devs(pattern):
-    return [dev for dev in os.listdir(core_path) if re.match(pattern,dev)]
+    def __gather_stats(self,device):
+        dev_stats = {}
+        #get qeueu id's
+        queue_path = os.path.join(self.core_path, device, "mq")
+        queue_list = [q for q in os.listdir(queue_path)]
+        for queue in queue_list:
+            dev_stats[queue] = {}
+            cpus_path = os.path.join(queue_path, queue)
+            cpus_list = [c for c in os.listdir(cpus_path)
+                        if os.path.isdir(os.path.join(cpus_path, c))]
+            for cpu in cpus_list:
+                cpu_path = os.path.join(cpus_path, cpu)
+                io = self.__get_cpu_comp_io(cpu_path)
+                print(io)
+                dev_stats[queue][cpu] = io
 
-def gather(nvm_dev_list):
-    if not len(nvm_dev_list):
-        logging.fatal("[data]: Empty device list")
+        return dev_stats
 
+    def __get_cpu_comp_io(self, cpu_path):
+        fd = open(os.path.join(cpu_path, "completed"), "r")
+        raw_data = fd.read()
+        fd.close()
+        return sum([int(x) for x in raw_data.split(' ')])
+
+
+
+
+
+
+
+
+    def print_stats(self):
+        self.lock.acquire()
+        print("stats here")
+        self.lock.release()
 
