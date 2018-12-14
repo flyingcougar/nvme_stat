@@ -55,7 +55,6 @@ class NVMStats:
             for cpu in cpus_list:
                 cpu_path = os.path.join(cpus_path, cpu)
                 io = self.__get_cpu_comp_io(cpu_path)
-                print(io)
                 dev_stats[queue][cpu] = io
 
         return dev_stats
@@ -65,11 +64,6 @@ class NVMStats:
         raw_data = fd.read()
         fd.close()
         return sum([int(x) for x in raw_data.split(' ')])
-
-
-
-
-
 
 
 
