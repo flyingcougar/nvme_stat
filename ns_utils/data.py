@@ -56,8 +56,8 @@ class NVMStats:
                 cpu_path = os.path.join(cpus_path, cpu)
                 io = self.__get_cpu_comp_io(cpu_path)
                 dev_stats[queue][cpu] = io
-
         return dev_stats
+
 
     def __get_cpu_comp_io(self, cpu_path):
         fd = open(os.path.join(cpu_path, "completed"), "r")
@@ -65,10 +65,29 @@ class NVMStats:
         fd.close()
         return sum([int(x) for x in raw_data.split(' ')])
 
-
-
+    #stats[device][queue_id][cpu] = io num
     def print_stats(self):
         self.lock.acquire()
-        print("stats here")
+        sts = self.stats
         self.lock.release()
+        for dev in sts:
+            print("Device \"{}\" info:".format(dev))
+            cores = 0
+            for q in sts[dev]:
+                cores = cores + len(sts[dev][q])
+            print("Queue count: {}\t Core count: {}".format(len(sts[dev]), cores))
+            line = ""
+            for q in sts[dev]:
+                line = "Q:{}\t".format(q)
+                for c in sts[dev][q]:
+                    line = line + c + ": " + str(sts[dev][q][c]) + "\t"
+                print(line)
+
+
+
+
+
+
+
+
 

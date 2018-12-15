@@ -33,6 +33,7 @@ def main():
         if not len(collector.get_devices()):
             logging.error("No nvme devices detected, exiting")
         collector.gather_all_dev_stats()
+        collector.print_stats()
 
 
 
